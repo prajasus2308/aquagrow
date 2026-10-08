@@ -1,0 +1,5550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#050505">
+<title>AquaGrow 🌱💧 — Smart Irrigation System</title>
+
+<style>
+/* ============================================================
+   AQUAGROW — COMPLETE OFFLINE USB / WEB SERIAL DASHBOARD
+   ============================================================
+
+   FONT POLICY:
+   - Main interface text = WHITE
+   - Secondary text = LIGHT GRAY
+   - Status colors remain meaningful:
+       Green = healthy / connected / ON
+       Red   = dry / error / OFF
+       Orange = warning
+       Blue  = information
+   ============================================================ */
+
+:root{
+    --bg:#050505;
+    --bg2:#0a0a0a;
+    --card:#101010;
+    --card2:#151515;
+    --card3:#1a1a1a;
+    --border:#272727;
+
+    --white:#ffffff;
+    --text:#ffffff;
+    --muted:#bdbdbd;
+    --dim:#858585;
+
+    --green:#42f58d;
+    --green2:#1fcf70;
+    --red:#ff5252;
+    --orange:#ffb347;
+    --blue:#58a6ff;
+    --cyan:#55e6ff;
+    --purple:#b48cff;
+
+    --radius:20px;
+    --radius-sm:13px;
+
+    --shadow:0 20px 60px rgba(0,0,0,.45);
+    --transition:.22s ease;
+}
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    color:var(--text);
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    min-height:100vh;
+    background:
+        radial-gradient(circle at 10% 0%,rgba(66,245,141,.08),transparent 28%),
+        radial-gradient(circle at 90% 10%,rgba(88,166,255,.07),transparent 28%),
+        var(--bg);
+    color:var(--white);
+    font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;
+    overflow-x:hidden;
+}
+
+button,
+input,
+textarea,
+select{
+    font:inherit;
+    color:var(--white);
+}
+
+button{
+    cursor:pointer;
+}
+
+a{
+    color:var(--white);
+    text-decoration:none;
+}
+
+::placeholder{
+    color:#777 !important;
+}
+
+/* ============================================================
+   WELCOME SCREEN
+   ============================================================ */
+
+#welcomeScreen{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:#030303;
+    transition:opacity .7s ease,visibility .7s ease;
+}
+
+#welcomeScreen.hide{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+}
+
+.welcome-content{
+    width:min(90%,600px);
+    text-align:center;
+    animation:welcomeIn 1s ease;
+}
+
+.welcome-logo{
+    width:110px;
+    height:110px;
+    margin:0 auto 25px;
+    border-radius:32px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:55px;
+    background:linear-gradient(145deg,#151515,#080808);
+    border:1px solid #303030;
+    box-shadow:
+        0 0 50px rgba(66,245,141,.12),
+        inset 0 0 30px rgba(255,255,255,.025);
+}
+
+.welcome-title{
+    font-size:clamp(42px,8vw,76px);
+    font-weight:900;
+    letter-spacing:-4px;
+}
+
+.welcome-title span{
+    color:var(--green);
+}
+
+.welcome-tagline{
+    margin-top:10px;
+    color:#cfcfcf;
+    font-size:17px;
+    letter-spacing:1px;
+}
+
+.loading-line{
+    width:220px;
+    height:3px;
+    margin:35px auto 0;
+    background:#202020;
+    overflow:hidden;
+    border-radius:10px;
+}
+
+.loading-line span{
+    display:block;
+    height:100%;
+    width:0;
+    background:var(--green);
+    animation:loading 1.7s ease forwards;
+}
+
+@keyframes welcomeIn{
+    from{opacity:0;transform:translateY(25px) scale(.96)}
+    to{opacity:1;transform:none}
+}
+
+@keyframes loading{
+    to{width:100%}
+}
+
+/* ============================================================
+   APP LAYOUT
+   ============================================================ */
+
+.app{
+    width:min(1500px,100%);
+    margin:auto;
+    padding:24px;
+    padding-bottom:110px;
+}
+
+.topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    margin-bottom:28px;
+    padding:8px 0;
+}
+
+.brand{
+    display:flex;
+    align-items:center;
+    gap:13px;
+}
+
+.brand-icon{
+    width:48px;
+    height:48px;
+    border-radius:15px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:25px;
+    background:#121212;
+    border:1px solid #2b2b2b;
+}
+
+.brand-name{
+    font-weight:900;
+    font-size:21px;
+    letter-spacing:-.5px;
+}
+
+.brand-name span{
+    color:var(--green);
+}
+
+.brand-sub{
+    font-size:11px;
+    color:var(--muted);
+    margin-top:3px;
+}
+
+.connection-area{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.connection-pill{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    border:1px solid var(--border);
+    background:#0e0e0e;
+    padding:9px 13px;
+    border-radius:999px;
+    font-size:12px;
+}
+
+.status-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--red);
+    box-shadow:0 0 10px rgba(255,82,82,.4);
+}
+
+.status-dot.connected{
+    background:var(--green);
+    box-shadow:0 0 12px rgba(66,245,141,.6);
+}
+
+.primary-btn{
+    border:1px solid rgba(66,245,141,.35);
+    background:rgba(66,245,141,.10);
+    color:var(--green) !important;
+    border-radius:12px;
+    padding:11px 17px;
+    font-weight:800;
+    transition:var(--transition);
+}
+
+.primary-btn:hover{
+    transform:translateY(-2px);
+    background:rgba(66,245,141,.17);
+}
+
+.danger-btn{
+    border:1px solid rgba(255,82,82,.35);
+    background:rgba(255,82,82,.08);
+    color:var(--red) !important;
+}
+
+.secondary-btn{
+    border:1px solid var(--border);
+    background:#111;
+    border-radius:12px;
+    padding:11px 17px;
+    font-weight:700;
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+.nav{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    padding:5px;
+    margin-bottom:25px;
+    background:#0b0b0b;
+    border:1px solid var(--border);
+    border-radius:17px;
+}
+
+.nav button{
+    flex:1;
+    min-width:115px;
+    border:0;
+    background:transparent;
+    padding:12px 15px;
+    border-radius:12px;
+    color:#aaa !important;
+    font-weight:700;
+    transition:var(--transition);
+}
+
+.nav button:hover{
+    color:white !important;
+    background:#171717;
+}
+
+.nav button.active{
+    color:#050505 !important;
+    background:var(--green);
+}
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+
+.page{
+    display:none;
+    animation:pageIn .35s ease;
+}
+
+.page.active{
+    display:block;
+}
+
+@keyframes pageIn{
+    from{opacity:0;transform:translateY(8px)}
+    to{opacity:1;transform:none}
+}
+
+.hero{
+    padding:34px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    background:
+        radial-gradient(circle at 80% 20%,rgba(66,245,141,.08),transparent 30%),
+        linear-gradient(145deg,#111,#090909);
+    box-shadow:var(--shadow);
+    margin-bottom:20px;
+}
+
+.hero h1{
+    font-size:clamp(30px,5vw,54px);
+    letter-spacing:-2.5px;
+    line-height:1;
+}
+
+.hero h1 span{
+    color:var(--green);
+}
+
+.hero p{
+    color:#c5c5c5;
+    max-width:760px;
+    margin-top:14px;
+    line-height:1.7;
+}
+
+.section-title{
+    font-size:23px;
+    font-weight:900;
+    margin:28px 0 15px;
+    letter-spacing:-.6px;
+}
+
+.section-subtitle{
+    color:var(--muted);
+    margin-top:-8px;
+    margin-bottom:17px;
+    font-size:13px;
+}
+
+/* ============================================================
+   DASHBOARD CARDS
+   ============================================================ */
+
+.metrics{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:14px;
+}
+
+.metric-card{
+    position:relative;
+    overflow:hidden;
+    padding:22px;
+    min-height:160px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    background:linear-gradient(145deg,#121212,#0c0c0c);
+}
+
+.metric-card::after{
+    content:"";
+    position:absolute;
+    width:100px;
+    height:100px;
+    right:-45px;
+    bottom:-45px;
+    border-radius:50%;
+    background:rgba(66,245,141,.04);
+}
+
+.metric-icon{
+    font-size:25px;
+    margin-bottom:15px;
+}
+
+.metric-label{
+    color:#aaa;
+    font-size:12px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:1px;
+}
+
+.metric-value{
+    font-size:35px;
+    font-weight:900;
+    margin-top:6px;
+    letter-spacing:-1.5px;
+}
+
+.metric-unit{
+    font-size:15px;
+    color:#aaa;
+    font-weight:600;
+}
+
+.metric-detail{
+    color:#8c8c8c;
+    font-size:12px;
+    margin-top:7px;
+}
+
+.dashboard-grid{
+    display:grid;
+    grid-template-columns:1.4fr .8fr;
+    gap:16px;
+    margin-top:16px;
+}
+
+.card{
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    background:linear-gradient(145deg,#111,#0b0b0b);
+    padding:22px;
+    box-shadow:0 15px 40px rgba(0,0,0,.22);
+}
+
+.card-title{
+    font-size:16px;
+    font-weight:900;
+    margin-bottom:5px;
+}
+
+.card-description{
+    color:#888;
+    font-size:12px;
+    line-height:1.6;
+}
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+.status-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:18px;
+}
+
+.status-box{
+    padding:18px;
+    background:#0d0d0d;
+    border:1px solid #222;
+    border-radius:15px;
+}
+
+.status-label{
+    font-size:11px;
+    color:#888;
+    text-transform:uppercase;
+    letter-spacing:1px;
+}
+
+.status-value{
+    margin-top:8px;
+    font-size:22px;
+    font-weight:900;
+}
+
+.green{color:var(--green) !important}
+.red{color:var(--red) !important}
+.orange{color:var(--orange) !important}
+.blue{color:var(--blue) !important}
+.cyan{color:var(--cyan) !important}
+.purple{color:var(--purple) !important}
+
+/* ============================================================
+   IRRIGATION CONTROL
+   ============================================================ */
+
+.control-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:17px;
+}
+
+.control-btn{
+    min-height:58px;
+    border-radius:15px;
+    border:1px solid var(--border);
+    background:#121212;
+    font-weight:900;
+    transition:var(--transition);
+}
+
+.control-btn:hover{
+    transform:translateY(-2px);
+    background:#181818;
+}
+
+.control-btn.active{
+    border-color:rgba(66,245,141,.6);
+    background:rgba(66,245,141,.12);
+    color:var(--green) !important;
+}
+
+.pump-on.active{
+    color:var(--green) !important;
+    border-color:rgba(66,245,141,.55);
+}
+
+.pump-off.active{
+    color:var(--red) !important;
+    border-color:rgba(255,82,82,.5);
+    background:rgba(255,82,82,.08);
+}
+
+.mode-description{
+    margin-top:15px;
+    padding:14px;
+    border-radius:13px;
+    background:#0b0b0b;
+    border:1px solid #202020;
+    color:#aaa;
+    line-height:1.6;
+    font-size:13px;
+}
+
+/* ============================================================
+   PROGRESS / MOISTURE
+   ============================================================ */
+
+.moisture-visual{
+    margin-top:20px;
+}
+
+.progress-container{
+    height:13px;
+    border-radius:20px;
+    background:#202020;
+    overflow:hidden;
+    border:1px solid #292929;
+}
+
+.progress{
+    height:100%;
+    width:0%;
+    border-radius:20px;
+    background:linear-gradient(90deg,#ff5252,#ffb347,#42f58d);
+    transition:width .5s ease;
+}
+
+.threshold-row{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:8px;
+    font-size:11px;
+    color:#888;
+}
+
+/* ============================================================
+   CHART
+   ============================================================ */
+
+.chart-wrap{
+    width:100%;
+    height:330px;
+    position:relative;
+    margin-top:20px;
+    overflow:hidden;
+    border-radius:14px;
+    background:#090909;
+    border:1px solid #1d1d1d;
+}
+
+#moistureCanvas{
+    width:100%;
+    height:100%;
+    display:block;
+}
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.table-wrap{
+    overflow-x:auto;
+    margin-top:18px;
+    border:1px solid #202020;
+    border-radius:14px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:700px;
+}
+
+th,
+td{
+    padding:13px 14px;
+    text-align:left;
+    border-bottom:1px solid #202020;
+    font-size:12px;
+}
+
+th{
+    color:#aaa !important;
+    background:#101010;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.8px;
+}
+
+td{
+    color:#eee !important;
+}
+
+tr:last-child td{
+    border-bottom:0;
+}
+
+/* ============================================================
+   FORMS
+   ============================================================ */
+
+.form-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+}
+
+.form-group{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.form-group.full{
+    grid-column:1/-1;
+}
+
+.form-label{
+    font-size:12px;
+    color:#aaa;
+    font-weight:800;
+}
+
+input,
+textarea,
+select{
+    width:100%;
+    border:1px solid #2a2a2a;
+    background:#0b0b0b;
+    border-radius:12px;
+    padding:13px 14px;
+    outline:none;
+}
+
+input:focus,
+textarea:focus,
+select:focus{
+    border-color:rgba(66,245,141,.65);
+    box-shadow:0 0 0 3px rgba(66,245,141,.08);
+}
+
+textarea{
+    resize:vertical;
+    min-height:120px;
+    line-height:1.6;
+}
+
+.form-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:17px;
+}
+
+.validation{
+    margin-top:12px;
+    font-size:12px;
+    color:var(--orange);
+    min-height:17px;
+}
+
+/* ============================================================
+   PLANTCARE AI
+   ============================================================ */
+
+.ai-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+    margin-bottom:20px;
+}
+
+.ai-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:7px 11px;
+    border-radius:999px;
+    background:rgba(180,140,255,.10);
+    border:1px solid rgba(180,140,255,.25);
+    color:var(--purple) !important;
+    font-size:11px;
+    font-weight:900;
+}
+
+.ai-result{
+    margin-top:20px;
+    padding:20px;
+    border-radius:16px;
+    background:
+        radial-gradient(circle at 90% 0%,rgba(180,140,255,.09),transparent 30%),
+        #0b0b0b;
+    border:1px solid #252525;
+}
+
+.ai-result h3{
+    margin-bottom:10px;
+}
+
+.ai-result p{
+    color:#d1d1d1;
+    line-height:1.75;
+    font-size:13px;
+}
+
+.recommendation-list{
+    display:grid;
+    gap:10px;
+    margin-top:15px;
+}
+
+.recommendation{
+    display:flex;
+    gap:12px;
+    padding:13px;
+    border-radius:12px;
+    background:#111;
+    border:1px solid #202020;
+}
+
+.recommendation-icon{
+    width:32px;
+    height:32px;
+    flex:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:10px;
+    background:#191919;
+}
+
+.recommendation p{
+    margin:0;
+}
+
+/* ============================================================
+   RATING
+   ============================================================ */
+
+.stars{
+    display:flex;
+    gap:8px;
+    margin:15px 0;
+}
+
+.star{
+    width:44px;
+    height:44px;
+    border-radius:12px;
+    border:1px solid #292929;
+    background:#111;
+    font-size:22px;
+    color:#555 !important;
+}
+
+.star.selected{
+    color:#ffd166 !important;
+    border-color:rgba(255,209,102,.45);
+    background:rgba(255,209,102,.08);
+}
+
+.average-rating{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-top:20px;
+    padding:18px;
+    border-radius:15px;
+    background:#0d0d0d;
+    border:1px solid #222;
+}
+
+.average-number{
+    font-size:35px;
+    font-weight:900;
+}
+
+.rating-history{
+    display:grid;
+    gap:9px;
+    margin-top:15px;
+}
+
+.rating-item{
+    padding:13px;
+    background:#101010;
+    border:1px solid #202020;
+    border-radius:12px;
+}
+
+.rating-stars{
+    color:#ffd166 !important;
+}
+
+/* ============================================================
+   ABOUT / PROJECT INFORMATION
+   ============================================================ */
+
+.info-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+}
+
+.info-card{
+    padding:20px;
+    border-radius:17px;
+    background:#0e0e0e;
+    border:1px solid #232323;
+}
+
+.info-card h3{
+    font-size:16px;
+    margin-bottom:10px;
+}
+
+.info-card p,
+.info-card li{
+    color:#c8c8c8;
+    line-height:1.75;
+    font-size:13px;
+}
+
+.info-card ul{
+    padding-left:20px;
+}
+
+.full-info{
+    grid-column:1/-1;
+}
+
+/* ============================================================
+   SYSTEM FLOW
+   ============================================================ */
+
+.flow{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:18px;
+}
+
+.flow-item{
+    min-width:130px;
+    padding:17px 12px;
+    text-align:center;
+    border-radius:14px;
+    border:1px solid #252525;
+    background:#101010;
+}
+
+.flow-item strong{
+    display:block;
+    font-size:13px;
+}
+
+.flow-item small{
+    display:block;
+    margin-top:5px;
+    color:#888;
+}
+
+.flow-arrow{
+    color:var(--green) !important;
+    font-size:22px;
+    font-weight:900;
+}
+
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
+
+.component-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:13px;
+}
+
+.component{
+    padding:18px;
+    border:1px solid #222;
+    border-radius:15px;
+    background:#0e0e0e;
+}
+
+.component-icon{
+    font-size:26px;
+}
+
+.component strong{
+    display:block;
+    margin-top:10px;
+}
+
+.component span{
+    display:block;
+    margin-top:5px;
+    color:#888;
+    font-size:12px;
+    line-height:1.5;
+}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+
+.empty{
+    text-align:center;
+    padding:40px 20px;
+    color:#777;
+}
+
+.empty-icon{
+    font-size:40px;
+    margin-bottom:12px;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+
+#toastContainer{
+    position:fixed;
+    right:20px;
+    bottom:25px;
+    z-index:10000;
+    display:grid;
+    gap:10px;
+    width:min(360px,calc(100% - 40px));
+}
+
+.toast{
+    padding:14px 16px;
+    border-radius:14px;
+    background:#141414;
+    border:1px solid #303030;
+    box-shadow:var(--shadow);
+    animation:toastIn .3s ease;
+    font-size:13px;
+}
+
+.toast.success{
+    border-color:rgba(66,245,141,.4);
+}
+
+.toast.error{
+    border-color:rgba(255,82,82,.4);
+}
+
+.toast.warning{
+    border-color:rgba(255,179,71,.4);
+}
+
+@keyframes toastIn{
+    from{opacity:0;transform:translateY(10px)}
+    to{opacity:1;transform:none}
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.footer{
+    margin-top:45px;
+    padding:25px 5px;
+    text-align:center;
+    color:#666;
+    font-size:11px;
+    line-height:1.7;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media(max-width:1100px){
+    .metrics{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .dashboard-grid{
+        grid-template-columns:1fr;
+    }
+
+    .component-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+}
+
+@media(max-width:700px){
+    .app{
+        padding:14px;
+        padding-bottom:100px;
+    }
+
+    .topbar{
+        align-items:flex-start;
+    }
+
+    .connection-area{
+        flex-direction:column;
+        align-items:flex-end;
+    }
+
+    .hero{
+        padding:24px;
+    }
+
+    .metrics{
+        grid-template-columns:1fr 1fr;
+        gap:10px;
+    }
+
+    .metric-card{
+        padding:17px;
+        min-height:145px;
+    }
+
+    .metric-value{
+        font-size:27px;
+    }
+
+    .form-grid,
+    .info-grid{
+        grid-template-columns:1fr;
+    }
+
+    .full-info{
+        grid-column:auto;
+    }
+
+    .component-grid{
+        grid-template-columns:1fr;
+    }
+
+    .status-grid,
+    .control-row{
+        grid-template-columns:1fr;
+    }
+
+    .nav button{
+        min-width:105px;
+    }
+
+    .flow{
+        flex-direction:column;
+    }
+
+    .flow-arrow{
+        transform:rotate(90deg);
+    }
+}
+
+@media(max-width:430px){
+    .brand-sub{
+        display:none;
+    }
+
+    .connection-pill{
+        font-size:10px;
+    }
+
+    .metrics{
+        grid-template-columns:1fr;
+    }
+
+    .welcome-title{
+        letter-spacing:-2px;
+    }
+}
+
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible{
+    outline:2px solid var(--green);
+    outline-offset:2px;
+}
+
+@media(prefers-reduced-motion:reduce){
+    *,
+    *::before,
+    *::after{
+        animation-duration:.01ms !important;
+        transition-duration:.01ms !important;
+        scroll-behavior:auto !important;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ============================================================
+     WELCOME
+     ============================================================ -->
+
+<div id="welcomeScreen">
+    <div class="welcome-content">
+        <div class="welcome-logo">🌱</div>
+        <div class="welcome-title">
+            Aqua<span>Grow</span>
+        </div>
+        <div class="welcome-tagline">
+            Growing Smarter. Saving Water.
+        </div>
+        <div class="loading-line">
+            <span></span>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MAIN APP
+     ============================================================ -->
+
+<div class="app">
+
+<header class="topbar">
+
+    <div class="brand">
+        <div class="brand-icon">🌱</div>
+
+        <div>
+            <div class="brand-name">
+                Aqua<span>Grow</span> 🌱💧
+            </div>
+
+            <div class="brand-sub">
+                Smart Irrigation • USB/Web Serial
+            </div>
+        </div>
+    </div>
+
+    <div class="connection-area">
+
+        <div class="connection-pill">
+            <span id="connectionDot" class="status-dot"></span>
+            <span id="connectionText">USB Disconnected</span>
+        </div>
+
+        <button id="connectBtn" class="primary-btn">
+            Connect ESP32
+        </button>
+
+        <button id="disconnectBtn"
+                class="primary-btn danger-btn"
+                style="display:none">
+            Disconnect
+        </button>
+
+    </div>
+
+</header>
+
+<!-- ============================================================
+     NAVIGATION
+     ============================================================ -->
+
+<nav class="nav">
+
+    <button class="nav-btn active" data-page="home">
+        🏠 Home
+    </button>
+
+    <button class="nav-btn" data-page="irrigation">
+        💧 Irrigation
+    </button>
+
+    <button class="nav-btn" data-page="history">
+        📊 History
+    </button>
+
+    <button class="nav-btn" data-page="settings">
+        ⚙️ Settings
+    </button>
+
+    <button class="nav-btn" data-page="plantcare">
+        🌿 PlantCare AI
+    </button>
+
+    <button class="nav-btn" data-page="rating">
+        ⭐ Rating
+    </button>
+
+    <button class="nav-btn" data-page="about">
+        ℹ️ About
+    </button>
+
+</nav>
+
+<!-- ============================================================
+     HOME
+     ============================================================ -->
+
+<section id="home" class="page active">
+
+    <div class="hero">
+
+        <h1>
+            Smart irrigation,
+            <span>made intelligent.</span>
+        </h1>
+
+        <p>
+            AquaGrow monitors soil moisture and environmental conditions
+            and helps control irrigation through an Arduino Uno, ESP32,
+            relay and low-voltage DC pump. The dashboard communicates
+            directly through USB/Web Serial without requiring Wi-Fi,
+            an ESP32 hotspot, cloud services or Internet access.
+        </p>
+
+    </div>
+
+    <div class="section-title">
+        Live Environment
+    </div>
+
+    <div class="section-subtitle">
+        Real sensor values received from the Arduino through the ESP32 USB serial bridge.
+    </div>
+
+    <div class="metrics">
+
+        <div class="metric-card">
+
+            <div class="metric-icon">💧</div>
+
+            <div class="metric-label">
+                Soil Moisture
+            </div>
+
+            <div class="metric-value">
+                <span id="moistureValue">--</span>
+                <span class="metric-unit">%</span>
+            </div>
+
+            <div id="moistureDetail" class="metric-detail">
+                Waiting for sensor data
+            </div>
+
+        </div>
+
+        <div class="metric-card">
+
+            <div class="metric-icon">🌡️</div>
+
+            <div class="metric-label">
+                Temperature
+            </div>
+
+            <div class="metric-value">
+                <span id="temperatureValue">--</span>
+                <span class="metric-unit">°C</span>
+            </div>
+
+            <div id="temperatureDetail" class="metric-detail">
+                DHT22
+            </div>
+
+        </div>
+
+        <div class="metric-card">
+
+            <div class="metric-icon">💨</div>
+
+            <div class="metric-label">
+                Humidity
+            </div>
+
+            <div class="metric-value">
+                <span id="humidityValue">--</span>
+                <span class="metric-unit">%</span>
+            </div>
+
+            <div id="humidityDetail" class="metric-detail">
+                DHT22
+            </div>
+
+        </div>
+
+        <div class="metric-card">
+
+            <div class="metric-icon">⏱️</div>
+
+            <div class="metric-label">
+                Last Update
+            </div>
+
+            <div class="metric-value"
+                 id="lastUpdateValue"
+                 style="font-size:24px">
+                --
+            </div>
+
+            <div id="dataStateDetail" class="metric-detail">
+                No live data
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="dashboard-grid">
+
+        <div class="card">
+
+            <div class="card-title">
+                🌱 Soil Condition
+            </div>
+
+            <div class="card-description">
+                The soil condition is determined from the moisture
+                percentage and the configured dry/wet thresholds.
+            </div>
+
+            <div class="moisture-visual">
+
+                <div class="progress-container">
+                    <div id="moistureProgress"
+                         class="progress">
+                    </div>
+                </div>
+
+                <div class="threshold-row">
+                    <span>
+                        Dry: <strong id="homeDryThreshold">30%</strong>
+                    </span>
+
+                    <span id="homeSoilStatus">
+                        NO DATA
+                    </span>
+
+                    <span>
+                        Wet: <strong id="homeWetThreshold">60%</strong>
+                    </span>
+                </div>
+
+            </div>
+
+            <div class="status-grid">
+
+                <div class="status-box">
+
+                    <div class="status-label">
+                        Soil Status
+                    </div>
+
+                    <div id="soilStatus"
+                         class="status-value">
+                        NO DATA
+                    </div>
+
+                </div>
+
+                <div class="status-box">
+
+                    <div class="status-label">
+                        Pump Status
+                    </div>
+
+                    <div id="pumpStatus"
+                         class="status-value">
+                        NO DATA
+                    </div>
+
+                </div>
+
+                <div class="status-box">
+
+                    <div class="status-label">
+                        Operating Mode
+                    </div>
+
+                    <div id="modeStatus"
+                         class="status-value">
+                        NO DATA
+                    </div>
+
+                </div>
+
+                <div class="status-box">
+
+                    <div class="status-label">
+                        USB Connection
+                    </div>
+
+                    <div id="usbStatus"
+                         class="status-value red">
+                        DISCONNECTED
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="card">
+
+            <div class="card-title">
+                ⚡ Quick Irrigation Control
+            </div>
+
+            <div class="card-description">
+                Select automatic or manual irrigation mode.
+            </div>
+
+            <div class="control-row">
+
+                <button id="homeAutoBtn"
+                        class="control-btn"
+                        onclick="setMode('AUTO')">
+                    🤖 AUTO
+                </button>
+
+                <button id="homeManualBtn"
+                        class="control-btn"
+                        onclick="setMode('MANUAL')">
+                    🎮 MANUAL
+                </button>
+
+            </div>
+
+            <div class="control-row">
+
+                <button id="homePumpOnBtn"
+                        class="control-btn pump-on"
+                        onclick="setPump('ON')">
+                    💧 PUMP ON
+                </button>
+
+                <button id="homePumpOffBtn"
+                        class="control-btn pump-off"
+                        onclick="setPump('OFF')">
+                    ⛔ PUMP OFF
+                </button>
+
+            </div>
+
+            <div id="modeDescription"
+                 class="mode-description">
+                Connect the ESP32 to begin receiving live information.
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ============================================================
+     IRRIGATION
+     ============================================================ -->
+
+<section id="irrigation" class="page">
+
+    <div class="hero">
+
+        <h1>
+            Irrigation <span>Control</span>
+        </h1>
+
+        <p>
+            AquaGrow can operate in AUTO or MANUAL mode. In AUTO mode,
+            the Arduino decides when irrigation should start and stop
+            using the configured soil moisture thresholds. MANUAL mode
+            allows the user to send direct pump commands.
+        </p>
+
+    </div>
+
+    <div class="dashboard-grid">
+
+        <div class="card">
+
+            <div class="card-title">
+                🤖 Operating Mode
+            </div>
+
+            <div class="card-description">
+                AUTO allows threshold-based irrigation. MANUAL allows
+                direct pump control.
+            </div>
+
+            <div class="control-row">
+
+                <button id="autoBtn"
+                        class="control-btn"
+                        onclick="setMode('AUTO')">
+                    🤖 AUTOMATIC MODE
+                </button>
+
+                <button id="manualBtn"
+                        class="control-btn"
+                        onclick="setMode('MANUAL')">
+                    🎮 MANUAL MODE
+                </button>
+
+            </div>
+
+            <div class="mode-description">
+
+                <strong>Automatic mode:</strong><br>
+                When soil moisture reaches or falls below the dry threshold,
+                the Arduino can activate irrigation. Once moisture reaches
+                or exceeds the wet threshold, the pump can be stopped.
+                Between the two thresholds, the previous pump state can
+                be maintained to avoid unnecessary switching.
+
+                <br><br>
+
+                <strong>Manual mode:</strong><br>
+                The user controls the pump using the ON and OFF buttons.
+                Manual control does not depend on the automatic threshold
+                decision.
+            </div>
+
+        </div>
+
+        <div class="card">
+
+            <div class="card-title">
+                💧 Pump Control
+            </div>
+
+            <div class="card-description">
+                Send a pump command to the Arduino through the ESP32.
+            </div>
+
+            <div class="control-row">
+
+                <button id="pumpOnBtn"
+                        class="control-btn pump-on"
+                        onclick="setPump('ON')">
+                    💧 TURN PUMP ON
+                </button>
+
+                <button id="pumpOffBtn"
+                        class="control-btn pump-off"
+                        onclick="setPump('OFF')">
+                    ⛔ TURN PUMP OFF
+                </button>
+
+            </div>
+
+            <div class="status-box"
+                 style="margin-top:15px">
+
+                <div class="status-label">
+                    Current Pump State
+                </div>
+
+                <div id="irrigationPumpStatus"
+                     class="status-value">
+                    NO DATA
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="section-title">
+        Threshold Logic
+    </div>
+
+    <div class="info-grid">
+
+        <div class="info-card">
+
+            <h3>🔴 Dry Threshold</h3>
+
+            <p>
+                This is the moisture level at or below which the soil
+                is considered dry. In AUTO mode, reaching this value
+                can trigger irrigation.
+            </p>
+
+            <p style="margin-top:10px">
+                Current:
+                <strong id="irrigationDryThreshold">30%</strong>
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>🟢 Wet Threshold</h3>
+
+            <p>
+                This is the moisture level at or above which the soil
+                is considered sufficiently wet. In AUTO mode, reaching
+                this value can stop irrigation.
+            </p>
+
+            <p style="margin-top:10px">
+                Current:
+                <strong id="irrigationWetThreshold">60%</strong>
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ============================================================
+     HISTORY
+     ============================================================ -->
+
+<section id="history" class="page">
+
+    <div class="hero">
+
+        <h1>
+            Sensor <span>History</span>
+        </h1>
+
+        <p>
+            AquaGrow stores recent live readings in the browser during
+            the current session. The graph makes it easier to observe
+            how soil moisture changes over time.
+        </p>
+
+    </div>
+
+    <div class="card">
+
+        <div style="display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap">
+
+            <div>
+                <div class="card-title">
+                    📈 Soil Moisture Graph
+                </div>
+
+                <div class="card-description">
+                    Recent moisture measurements received from the sensor.
+                </div>
+            </div>
+
+            <button class="secondary-btn"
+                    onclick="clearHistory()">
+                Clear History
+            </button>
+
+        </div>
+
+        <div class="chart-wrap">
+            <canvas id="moistureCanvas"></canvas>
+        </div>
+
+    </div>
+
+    <div class="card" style="margin-top:16px">
+
+        <div class="card-title">
+            📋 Recent Sensor Readings
+        </div>
+
+        <div class="card-description">
+            Latest readings are listed first.
+        </div>
+
+        <div id="historyTableContainer">
+            <div class="empty">
+                <div class="empty-icon">📊</div>
+                No sensor history available yet.
+            </div>
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ============================================================
+     SETTINGS
+     ============================================================ -->
+
+<section id="settings" class="page">
+
+    <div class="hero">
+
+        <h1>
+            System <span>Settings</span>
+        </h1>
+
+        <p>
+            Configure the moisture thresholds used by the Arduino's
+            automatic irrigation logic. Values are checked before
+            commands are sent.
+        </p>
+
+    </div>
+
+    <div class="card">
+
+        <div class="card-title">
+            ⚙️ Irrigation Thresholds
+        </div>
+
+        <div class="card-description">
+            Enter percentages between 0 and 100. The dry threshold
+            should be lower than the wet threshold.
+        </div>
+
+        <div class="form-grid"
+             style="margin-top:20px">
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Dry Threshold (%)
+                </label>
+
+                <input id="dryThresholdInput"
+                       type="number"
+                       min="0"
+                       max="100"
+                       step="1"
+                       value="30">
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Wet Threshold (%)
+                </label>
+
+                <input id="wetThresholdInput"
+                       type="number"
+                       min="0"
+                       max="100"
+                       step="1"
+                       value="60">
+
+            </div>
+
+        </div>
+
+        <div id="settingsValidation"
+             class="validation">
+        </div>
+
+        <div class="form-actions">
+
+            <button class="primary-btn"
+                    onclick="saveThresholds()">
+                Save & Send to Arduino
+            </button>
+
+            <button class="secondary-btn"
+                    onclick="loadSavedSettings()">
+                Restore Saved
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="info-grid"
+         style="margin-top:16px">
+
+        <div class="info-card">
+
+            <h3>🔴 Dry Condition</h3>
+
+            <p>
+                Soil moisture at or below the dry threshold is treated
+                as a dry condition.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>🟢 Wet Condition</h3>
+
+            <p>
+                Soil moisture at or above the wet threshold is treated
+                as a sufficiently wet condition.
+            </p>
+
+        </div>
+
+        <div class="info-card full-info">
+
+            <h3>🧠 Why Two Thresholds?</h3>
+
+            <p>
+                Using separate dry and wet thresholds creates a useful
+                control gap between starting and stopping irrigation.
+                This can reduce rapid ON/OFF switching when the measured
+                moisture fluctuates around a single value.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ============================================================
+     PLANTCARE AI
+     ============================================================ -->
+
+<section id="plantcare" class="page">
+
+    <div class="hero">
+
+        <div class="ai-header">
+
+            <div>
+                <h1>
+                    PlantCare <span>AI</span>
+                </h1>
+            </div>
+
+            <div class="ai-badge">
+                🧠 OFFLINE LOCAL ASSISTANT
+            </div>
+
+        </div>
+
+        <p>
+            PlantCare AI is a local rule-based assistant included in
+            AquaGrow. It uses the plant name, plant condition and the
+            current sensor readings to produce plant-care suggestions.
+            It does not send your data to a cloud AI service.
+        </p>
+
+    </div>
+
+    <div class="card">
+
+        <div class="card-title">
+            🌿 Plant Information
+        </div>
+
+        <div class="card-description">
+            Enter information about the plant to generate a local
+            plant-care recommendation.
+        </div>
+
+        <div class="form-grid"
+             style="margin-top:20px">
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Plant Name
+                </label>
+
+                <input id="plantName"
+                       type="text"
+                       placeholder="Example: Tomato">
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Plant Condition
+                </label>
+
+                <select id="plantCondition">
+
+                    <option value="healthy">
+                        Healthy
+                    </option>
+
+                    <option value="dry">
+                        Leaves/soil appear dry
+                    </option>
+
+                    <option value="weak">
+                        Plant looks weak
+                    </option>
+
+                    <option value="yellow">
+                        Leaves look yellow
+                    </option>
+
+                    <option value="unknown">
+                        Not sure
+                    </option>
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Current Soil Moisture (%)
+                </label>
+
+                <input id="plantMoisture"
+                       type="number"
+                       min="0"
+                       max="100"
+                       placeholder="Uses live value automatically">
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Current Temperature (°C)
+                </label>
+
+                <input id="plantTemperature"
+                       type="number"
+                       min="-20"
+                       max="80"
+                       step=".1"
+                       placeholder="Uses live value automatically">
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Current Humidity (%)
+                </label>
+
+                <input id="plantHumidity"
+                       type="number"
+                       min="0"
+                       max="100"
+                       placeholder="Uses live value automatically">
+
+            </div>
+
+        </div>
+
+        <div class="form-actions">
+
+            <button class="primary-btn"
+                    onclick="generatePlantAdvice()">
+                🌱 Generate PlantCare Advice
+            </button>
+
+            <button class="secondary-btn"
+                    onclick="useLivePlantData()">
+                Use Live Sensor Data
+            </button>
+
+        </div>
+
+        <div id="plantAdvice"
+             class="ai-result"
+             style="display:none">
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ============================================================
+     RATING
+     ============================================================ -->
+
+<section id="rating" class="page">
+
+    <div class="hero">
+
+        <h1>
+            Rate <span>AquaGrow</span>
+        </h1>
+
+        <p>
+            Record your experience with the AquaGrow dashboard.
+            Ratings are stored locally in the current browser session
+            and are not uploaded to the Internet.
+        </p>
+
+    </div>
+
+    <div class="dashboard-grid">
+
+        <div class="card">
+
+            <div class="card-title">
+                ⭐ Your Rating
+            </div>
+
+            <div class="card-description">
+                Select one to five stars.
+            </div>
+
+            <div id="starContainer"
+                 class="stars">
+
+                <button class="star" data-star="1">★</button>
+                <button class="star" data-star="2">★</button>
+                <button class="star" data-star="3">★</button>
+                <button class="star" data-star="4">★</button>
+                <button class="star" data-star="5">★</button>
+
+            </div>
+
+            <div id="selectedRatingText"
+                 class="card-description">
+                No rating selected.
+            </div>
+
+            <div class="form-group"
+                 style="margin-top:20px">
+
+                <label class="form-label">
+                    Feedback
+                </label>
+
+                <textarea id="feedbackInput"
+                          placeholder="Tell us what you liked or what could be improved..."></textarea>
+
+            </div>
+
+            <div class="form-actions">
+
+                <button class="primary-btn"
+                        onclick="submitRating()">
+                    Submit Rating
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="card">
+
+            <div class="card-title">
+                📊 Rating Summary
+            </div>
+
+            <div class="average-rating">
+
+                <div id="averageRating"
+                     class="average-number">
+                    0.0
+                </div>
+
+                <div>
+                    <div class="rating-stars">
+                        ★★★★★
+                    </div>
+
+                    <div id="ratingCount"
+                         class="card-description">
+                        0 ratings
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="card-description"
+                 style="margin-top:15px">
+                Average rating is calculated from ratings stored
+                locally in this browser.
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="card"
+         style="margin-top:16px">
+
+        <div class="card-title">
+            📝 Rating History
+        </div>
+
+        <div id="ratingHistory"
+             class="rating-history">
+
+            <div class="empty">
+                No ratings submitted yet.
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ============================================================
+     ABOUT
+     ============================================================ -->
+
+<section id="about" class="page">
+
+    <div class="hero">
+
+        <h1>
+            About <span>AquaGrow</span>
+        </h1>
+
+        <p>
+            AquaGrow is a smart irrigation project combining
+            environmental awareness, agriculture and electronics.
+            Its purpose is to use measured soil conditions to support
+            more controlled and efficient irrigation.
+        </p>
+
+    </div>
+
+    <div class="info-grid">
+
+        <div class="info-card full-info">
+
+            <h3>🌱 Project Introduction</h3>
+
+            <p>
+                AquaGrow is a smart irrigation system designed to
+                monitor soil moisture and environmental conditions
+                and control a water pump according to soil requirements.
+                The system combines a capacitive soil-moisture sensor,
+                DHT22 temperature/humidity sensor, Arduino Uno, ESP32,
+                relay and low-voltage DC water pump.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>❗ Problem Identification</h3>
+
+            <p>
+                Conventional watering may provide more water than a
+                plant currently requires or may depend entirely on
+                manual observation. This can lead to inefficient water
+                use, especially when watering decisions are not based
+                on actual soil moisture.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>🔬 Scientific Concept</h3>
+
+            <p>
+                Soil moisture sensors convert changes in soil moisture
+                into an electrical signal that a microcontroller can
+                measure. The Arduino processes the sensor reading and
+                converts it into a useful moisture percentage.
+                The DHT22 provides temperature and humidity information.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>🧪 Methodology</h3>
+
+            <ol style="padding-left:20px">
+
+                <li>Measure soil moisture.</li>
+
+                <li>Measure temperature and humidity.</li>
+
+                <li>Process readings using Arduino.</li>
+
+                <li>Determine soil condition.</li>
+
+                <li>Apply automatic threshold logic.</li>
+
+                <li>Control the relay and pump.</li>
+
+                <li>Send live data to ESP32.</li>
+
+                <li>Transfer information through USB.</li>
+
+                <li>Display data in AquaGrow dashboard.</li>
+
+            </ol>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>💡 Innovation</h3>
+
+            <p>
+                AquaGrow combines real-time sensing, automatic
+                irrigation logic and a modern browser dashboard.
+                The USB/Web Serial architecture also allows the
+                dashboard to communicate locally without depending
+                on an Internet connection or an ESP32 Wi-Fi hotspot.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>🌍 Environmental Relevance</h3>
+
+            <p>
+                By linking irrigation decisions to soil moisture,
+                the system encourages watering based on measured
+                conditions rather than using a fixed watering routine.
+                This supports responsible water management.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>💧 Water Conservation</h3>
+
+            <p>
+                Automatic control can reduce unnecessary watering by
+                stopping irrigation after the configured wet threshold
+                is reached. The actual effectiveness depends on sensor
+                calibration, threshold selection and the plant's
+                environmental requirements.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>📊 Findings / Results</h3>
+
+            <p>
+                The dashboard records live moisture readings and
+                displays changes over time through the History section.
+                This allows observations of soil conditions and pump
+                behaviour during testing.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>🚀 Future Scope</h3>
+
+            <ul>
+
+                <li>Multiple plant-zone monitoring.</li>
+
+                <li>Long-term sensor data storage.</li>
+
+                <li>Advanced plant-specific recommendations.</li>
+
+                <li>Weather-aware irrigation.</li>
+
+                <li>Mobile application integration.</li>
+
+                <li>Cloud synchronization as an optional future feature.</li>
+
+                <li>More advanced AI-based plant analysis.</li>
+
+            </ul>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>👨‍💻 Project Credits</h3>
+
+            <p>
+                <strong>Developer:</strong> Bhaskar
+            </p>
+
+            <p style="margin-top:8px">
+                <strong>Designer:</strong> Akshaan
+            </p>
+
+            <p style="margin-top:12px">
+                AquaGrow 🌱💧
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- SYSTEM FLOW -->
+
+    <div class="section-title">
+        🔬 Complete System Flow
+    </div>
+
+    <div class="card">
+
+        <div class="flow">
+
+            <div class="flow-item">
+                <strong>🌱 Soil Sensor</strong>
+                <small>Measures moisture</small>
+            </div>
+
+            <div class="flow-arrow">→</div>
+
+            <div class="flow-item">
+                <strong>🧠 Arduino Uno</strong>
+                <small>Processes sensors</small>
+            </div>
+
+            <div class="flow-arrow">→</div>
+
+            <div class="flow-item">
+                <strong>📡 ESP32</strong>
+                <small>USB serial bridge</small>
+            </div>
+
+            <div class="flow-arrow">→</div>
+
+            <div class="flow-item">
+                <strong>🖥️ USB Serial</strong>
+                <small>Local communication</small>
+            </div>
+
+            <div class="flow-arrow">→</div>
+
+            <div class="flow-item">
+                <strong>🌐 Dashboard</strong>
+                <small>Displays data</small>
+            </div>
+
+            <div class="flow-arrow">→</div>
+
+            <div class="flow-item">
+                <strong>🔌 Relay</strong>
+                <small>Switches pump</small>
+            </div>
+
+            <div class="flow-arrow">→</div>
+
+            <div class="flow-item">
+                <strong>💧 Pump</strong>
+                <small>Irrigates plant</small>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- COMPONENTS -->
+
+    <div class="section-title">
+        🔌 Hardware Components
+    </div>
+
+    <div class="component-grid">
+
+        <div class="component">
+            <div class="component-icon">🧠</div>
+            <strong>Arduino Uno</strong>
+            <span>Main sensor-processing microcontroller.</span>
+        </div>
+
+        <div class="component">
+            <div class="component-icon">📡</div>
+            <strong>ESP32</strong>
+            <span>USB serial communication bridge between hardware and browser.</span>
+        </div>
+
+        <div class="component">
+            <div class="component-icon">🌱</div>
+            <strong>Capacitive Soil Sensor</strong>
+            <span>Measures soil moisture level.</span>
+        </div>
+
+        <div class="component">
+            <div class="component-icon">🌡️</div>
+            <strong>DHT22</strong>
+            <span>Measures temperature and humidity.</span>
+        </div>
+
+        <div class="component">
+            <div class="component-icon">🔌</div>
+            <strong>1-Channel Relay</strong>
+            <span>Provides electrically controlled switching for the pump circuit.</span>
+        </div>
+
+        <div class="component">
+            <div class="component-icon">💧</div>
+            <strong>Low-Voltage DC Pump</strong>
+            <span>Moves water from the container to the plant.</span>
+        </div>
+
+    </div>
+
+    <!-- USB ARCHITECTURE -->
+
+    <div class="section-title">
+        🖥️ USB / Web Serial Architecture
+    </div>
+
+    <div class="info-grid">
+
+        <div class="info-card">
+
+            <h3>🔗 Communication</h3>
+
+            <p>
+                Arduino ↔ ESP32 communication uses a dedicated serial
+                connection at <strong>57600 baud</strong>.
+                The ESP32 communicates with the browser through USB
+                at <strong>115200 baud</strong>.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>🌐 Browser</h3>
+
+            <p>
+                The dashboard uses the Web Serial API supported by
+                compatible Chromium-based browsers such as Google
+                Chrome and Microsoft Edge.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>🚫 No Wi-Fi</h3>
+
+            <p>
+                This version does not create an ESP32 Wi-Fi hotspot,
+                does not use 192.168.4.1 and does not require Internet
+                connectivity for sensor communication.
+            </p>
+
+        </div>
+
+        <div class="info-card">
+
+            <h3>⚡ Performance</h3>
+
+            <p>
+                The communication design uses non-blocking serial
+                processing, rapid packet forwarding and automatic
+                sensor updates without unnecessary long delays.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+<footer class="footer">
+
+    <strong>AquaGrow 🌱💧</strong><br>
+
+    Growing Smarter. Saving Water.<br>
+
+    Smart Irrigation System • USB/Web Serial • Offline Dashboard<br><br>
+
+    Developer: Bhaskar &nbsp;•&nbsp; Designer: Akshaan
+
+</footer>
+
+</div>
+
+<!-- ============================================================
+     TOAST CONTAINER
+     ============================================================ -->
+
+<div id="toastContainer"></div>
+
+<script>
+/* ============================================================
+   AQUAGROW JAVASCRIPT
+   ============================================================
+
+   USB/Web Serial:
+   Browser ←USB→ ESP32 ←UART 57600→ Arduino
+
+   Arduino packet expected:
+
+   DATA,moisture,temperature,humidity,status,pump,mode
+
+   Example:
+
+   DATA,45,28.0,62,NORMAL,OFF,AUTO
+
+   Commands sent to Arduino:
+
+   MODE:AUTO
+   MODE:MANUAL
+   PUMP:ON
+   PUMP:OFF
+   DRY:30
+   WET:60
+   ============================================================ */
+
+"use strict";
+
+/* ============================================================
+   GLOBAL STATE
+   ============================================================ */
+
+const state = {
+
+    serialPort: null,
+    reader: null,
+    writer: null,
+
+    connected: false,
+
+    moisture: null,
+    temperature: null,
+    humidity: null,
+
+    soilStatus: null,
+    pump: null,
+    mode: null,
+
+    dryThreshold: 30,
+    wetThreshold: 60,
+
+    lastUpdate: null,
+
+    history: [],
+
+    selectedRating: 0,
+
+    ratings: [],
+
+    plantData: {
+        name:"",
+        condition:"healthy"
+    }
+
+};
+
+/* ============================================================
+   DOM HELPER
+   ============================================================ */
+
+function $(id){
+    return document.getElementById(id);
+}
+
+/* ============================================================
+   WELCOME SCREEN
+   ============================================================ */
+
+setTimeout(() => {
+
+    $("welcomeScreen").classList.add("hide");
+
+},1800);
+
+/* ============================================================
+   LOCAL STORAGE
+   ============================================================ */
+
+function loadLocalData(){
+
+    try{
+
+        const savedSettings =
+            localStorage.getItem("aquagrow_settings");
+
+        if(savedSettings){
+
+            const parsed =
+                JSON.parse(savedSettings);
+
+            if(
+                Number.isFinite(parsed.dry) &&
+                Number.isFinite(parsed.wet)
+            ){
+
+                state.dryThreshold =
+                    parsed.dry;
+
+                state.wetThreshold =
+                    parsed.wet;
+
+            }
+
+        }
+
+        const savedRatings =
+            localStorage.getItem("aquagrow_ratings");
+
+        if(savedRatings){
+
+            const parsed =
+                JSON.parse(savedRatings);
+
+            if(Array.isArray(parsed)){
+                state.ratings = parsed;
+            }
+
+        }
+
+    }catch(error){
+
+        console.error(
+            "Local data error:",
+            error
+        );
+
+    }
+
+}
+
+/* ============================================================
+   SAVE SETTINGS
+   ============================================================ */
+
+function saveLocalSettings(){
+
+    localStorage.setItem(
+        "aquagrow_settings",
+        JSON.stringify({
+            dry:state.dryThreshold,
+            wet:state.wetThreshold
+        })
+    );
+
+}
+
+/* ============================================================
+   INITIALIZATION
+   ============================================================ */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    initialize
+);
+
+function initialize(){
+
+    loadLocalData();
+
+    updateThresholdDisplays();
+
+    setupNavigation();
+
+    setupRating();
+
+    setupButtons();
+
+    drawChart();
+
+    renderRatingHistory();
+
+    renderAverageRating();
+
+    window.addEventListener(
+        "resize",
+        drawChart
+    );
+
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+
+function setupNavigation(){
+
+    document.querySelectorAll(
+        ".nav-btn"
+    ).forEach(button => {
+
+        button.addEventListener(
+            "click",
+            () => {
+
+                const page =
+                    button.dataset.page;
+
+                document.querySelectorAll(
+                    ".nav-btn"
+                ).forEach(btn => {
+
+                    btn.classList.remove(
+                        "active"
+                    );
+
+                });
+
+                button.classList.add(
+                    "active"
+                );
+
+                document.querySelectorAll(
+                    ".page"
+                ).forEach(section => {
+
+                    section.classList.remove(
+                        "active"
+                    );
+
+                });
+
+                const target =
+                    $(page);
+
+                if(target){
+
+                    target.classList.add(
+                        "active"
+                    );
+
+                }
+
+                if(page === "history"){
+
+                    drawChart();
+                    renderHistory();
+
+                }
+
+            }
+        );
+
+    });
+
+}
+
+/* ============================================================
+   BUTTON SETUP
+   ============================================================ */
+
+function setupButtons(){
+
+    $("connectBtn")
+        .addEventListener(
+            "click",
+            connectSerial
+        );
+
+    $("disconnectBtn")
+        .addEventListener(
+            "click",
+            disconnectSerial
+        );
+
+}
+
+/* ============================================================
+   WEB SERIAL SUPPORT
+   ============================================================ */
+
+function serialSupported(){
+
+    return "serial" in navigator;
+
+}
+
+/* ============================================================
+   CONNECT ESP32
+   ============================================================ */
+
+async function connectSerial(){
+
+    if(!serialSupported()){
+
+        showToast(
+            "Web Serial is not supported. Use Google Chrome or Microsoft Edge.",
+            "error"
+        );
+
+        return;
+
+    }
+
+    try{
+
+        state.serialPort =
+            await navigator.serial.requestPort();
+
+        await state.serialPort.open({
+            baudRate:115200
+        });
+
+        state.connected = true;
+
+        updateConnectionUI();
+
+        showToast(
+            "ESP32 connected successfully.",
+            "success"
+        );
+
+        startSerialReading();
+
+    }catch(error){
+
+        console.error(error);
+
+        state.connected = false;
+
+        updateConnectionUI();
+
+        if(
+            error &&
+            error.name !== "NotFoundError"
+        ){
+
+            showToast(
+                "Could not connect to the ESP32.",
+                "error"
+            );
+
+        }
+
+    }
+
+}
+
+/* ============================================================
+   SERIAL READING
+   ============================================================ */
+
+async function startSerialReading(){
+
+    if(!state.serialPort){
+        return;
+    }
+
+    const decoder =
+        new TextDecoder();
+
+    let buffer = "";
+
+    try{
+
+        while(
+            state.connected &&
+            state.serialPort.readable
+        ){
+
+            const reader =
+                state.serialPort.readable.getReader();
+
+            state.reader = reader;
+
+            try{
+
+                while(state.connected){
+
+                    const {
+                        value,
+                        done
+                    } = await reader.read();
+
+                    if(done){
+                        break;
+                    }
+
+                    if(value){
+
+                        buffer +=
+                            decoder.decode(
+                                value,
+                                {stream:true}
+                            );
+
+                        const lines =
+                            buffer.split(/\r?\n/);
+
+                        buffer =
+                            lines.pop() || "";
+
+                        for(
+                            const line of lines
+                        ){
+
+                            processSerialLine(
+                                line.trim()
+                            );
+
+                        }
+
+                    }
+
+                }
+
+            }finally{
+
+                reader.releaseLock();
+
+                state.reader = null;
+
+            }
+
+        }
+
+    }catch(error){
+
+        console.error(
+            "Serial read error:",
+            error
+        );
+
+        if(state.connected){
+
+            showToast(
+                "Serial communication stopped.",
+                "error"
+            );
+
+        }
+
+    }
+
+}
+
+/* ============================================================
+   PROCESS SERIAL DATA
+   ============================================================ */
+
+function processSerialLine(line){
+
+    if(!line){
+        return;
+    }
+
+    console.log(
+        "ESP32:",
+        line
+    );
+
+    /*
+       Expected:
+       DATA,45,28.0,62,NORMAL,OFF,AUTO
+    */
+
+    if(
+        line.startsWith("DATA,")
+    ){
+
+        parseDataPacket(line);
+
+        return;
+
+    }
+
+    if(
+        line.startsWith("STATUS,")
+    ){
+
+        console.log(
+            "Status:",
+            line
+        );
+
+        return;
+
+    }
+
+    /*
+       Accept JSON as an additional robust format.
+    */
+
+    if(
+        line.startsWith("{") &&
+        line.endsWith("}")
+    ){
+
+        try{
+
+            const data =
+                JSON.parse(line);
+
+            processJSONData(data);
+
+        }catch(error){
+
+            console.warn(
+                "Invalid JSON:",
+                line
+            );
+
+        }
+
+    }
+
+}
+
+/* ============================================================
+   PARSE DATA PACKET
+   ============================================================ */
+
+function parseDataPacket(line){
+
+    const parts =
+        line.split(",");
+
+    if(parts.length < 7){
+
+        console.warn(
+            "Incomplete DATA packet:",
+            line
+        );
+
+        return;
+
+    }
+
+    const moisture =
+        Number(parts[1]);
+
+    const temperature =
+        Number(parts[2]);
+
+    const humidity =
+        Number(parts[3]);
+
+    const soilStatus =
+        String(parts[4])
+        .trim()
+        .toUpperCase();
+
+    const pump =
+        String(parts[5])
+        .trim()
+        .toUpperCase();
+
+    const mode =
+        String(parts[6])
+        .trim()
+        .toUpperCase();
+
+    if(!Number.isFinite(moisture)){
+        return;
+    }
+
+    state.moisture =
+        clamp(
+            moisture,
+            0,
+            100
+        );
+
+    state.temperature =
+        Number.isFinite(temperature)
+            ? temperature
+            : null;
+
+    state.humidity =
+        Number.isFinite(humidity)
+            ? clamp(
+                humidity,
+                0,
+                100
+              )
+            : null;
+
+    state.soilStatus =
+        soilStatus;
+
+    state.pump =
+        pump;
+
+    state.mode =
+        mode;
+
+    state.lastUpdate =
+        new Date();
+
+    addHistoryPoint();
+
+    updateDashboard();
+
+}
+
+/* ============================================================
+   JSON DATA SUPPORT
+   ============================================================ */
+
+function processJSONData(data){
+
+    const moisture =
+        Number(
+            data.moisture ??
+            data.soilMoisture
+        );
+
+    if(!Number.isFinite(moisture)){
+        return;
+    }
+
+    state.moisture =
+        clamp(
+            moisture,
+            0,
+            100
+        );
+
+    const temperature =
+        Number(
+            data.temperature
+        );
+
+    const humidity =
+        Number(
+            data.humidity
+        );
+
+    state.temperature =
+        Number.isFinite(temperature)
+            ? temperature
+            : null;
+
+    state.humidity =
+        Number.isFinite(humidity)
+            ? clamp(
+                humidity,
+                0,
+                100
+              )
+            : null;
+
+    state.soilStatus =
+        String(
+            data.status ??
+            data.soilStatus ??
+            calculateSoilStatus(
+                state.moisture
+            )
+        ).toUpperCase();
+
+    state.pump =
+        String(
+            data.pump ??
+            "OFF"
+        ).toUpperCase();
+
+    state.mode =
+        String(
+            data.mode ??
+            "AUTO"
+        ).toUpperCase();
+
+    state.lastUpdate =
+        new Date();
+
+    addHistoryPoint();
+
+    updateDashboard();
+
+}
+
+/* ============================================================
+   HISTORY
+   ============================================================ */
+
+function addHistoryPoint(){
+
+    state.history.push({
+
+        time:new Date(),
+
+        moisture:state.moisture,
+
+        temperature:
+            state.temperature,
+
+        humidity:
+            state.humidity,
+
+        soilStatus:
+            state.soilStatus,
+
+        pump:
+            state.pump,
+
+        mode:
+            state.mode
+
+    });
+
+    /*
+       Keep the browser lightweight.
+       Maximum 1000 recent readings.
+    */
+
+    if(state.history.length > 1000){
+
+        state.history =
+            state.history.slice(-1000);
+
+    }
+
+    renderHistory();
+
+    drawChart();
+
+}
+
+/* ============================================================
+   UPDATE DASHBOARD
+   ============================================================ */
+
+function updateDashboard(){
+
+    if(!state.connected){
+        return;
+    }
+
+    $("moistureValue").textContent =
+        formatNumber(
+            state.moisture,
+            0
+        );
+
+    $("temperatureValue").textContent =
+        state.temperature === null
+            ? "--"
+            : formatNumber(
+                state.temperature,
+                1
+              );
+
+    $("humidityValue").textContent =
+        state.humidity === null
+            ? "--"
+            : formatNumber(
+                state.humidity,
+                0
+              );
+
+    const calculatedStatus =
+        calculateSoilStatus(
+            state.moisture
+        );
+
+    /*
+       Prefer Arduino status when supplied,
+       otherwise calculate locally.
+    */
+
+    const status =
+        state.soilStatus ||
+        calculatedStatus;
+
+    updateStatusElement(
+        $("soilStatus"),
+        status
+    );
+
+    updateStatusElement(
+        $("homeSoilStatus"),
+        status
+    );
+
+    updatePumpElement(
+        $("pumpStatus"),
+        state.pump
+    );
+
+    updatePumpElement(
+        $("irrigationPumpStatus"),
+        state.pump
+    );
+
+    updateModeElement(
+        $("modeStatus"),
+        state.mode
+    );
+
+    $("usbStatus").textContent =
+        "CONNECTED";
+
+    $("usbStatus").className =
+        "status-value green";
+
+    $("moistureProgress").style.width =
+        `${clamp(state.moisture,0,100)}%`;
+
+    $("lastUpdateValue").textContent =
+        formatTime(
+            state.lastUpdate
+        );
+
+    $("dataStateDetail").textContent =
+        "Live sensor data";
+
+    $("moistureDetail").textContent =
+        `${status} soil condition`;
+
+    $("temperatureDetail").textContent =
+        "DHT22 temperature reading";
+
+    $("humidityDetail").textContent =
+        "DHT22 humidity reading";
+
+    updateModeButtons();
+
+    updatePumpButtons();
+
+}
+
+/* ============================================================
+   SOIL STATUS
+   ============================================================ */
+
+function calculateSoilStatus(moisture){
+
+    if(
+        moisture <=
+        state.dryThreshold
+    ){
+
+        return "DRY";
+
+    }
+
+    if(
+        moisture >=
+        state.wetThreshold
+    ){
+
+        return "WET";
+
+    }
+
+    return "NORMAL";
+
+}
+
+/* ============================================================
+   STATUS UI
+   ============================================================ */
+
+function updateStatusElement(
+    element,
+    status
+){
+
+    if(!element){
+        return;
+    }
+
+    element.textContent =
+        status || "NO DATA";
+
+    element.className =
+        "status-value";
+
+    if(status === "DRY"){
+
+        element.classList.add(
+            "red"
+        );
+
+    }else if(status === "WET"){
+
+        element.classList.add(
+            "green"
+        );
+
+    }else if(status === "NORMAL"){
+
+        element.classList.add(
+            "blue"
+        );
+
+    }
+
+}
+
+function updatePumpElement(
+    element,
+    pump
+){
+
+    if(!element){
+        return;
+    }
+
+    element.textContent =
+        pump || "NO DATA";
+
+    element.className =
+        "status-value";
+
+    if(pump === "ON"){
+
+        element.classList.add(
+            "green"
+        );
+
+    }else if(pump === "OFF"){
+
+        element.classList.add(
+            "red"
+        );
+
+    }
+
+}
+
+function updateModeElement(
+    element,
+    mode
+){
+
+    if(!element){
+        return;
+    }
+
+    element.textContent =
+        mode || "NO DATA";
+
+    element.className =
+        "status-value";
+
+    if(mode === "AUTO"){
+
+        element.classList.add(
+            "green"
+        );
+
+    }else if(mode === "MANUAL"){
+
+        element.classList.add(
+            "purple"
+        );
+
+    }
+
+}
+
+/* ============================================================
+   CONNECTION UI
+   ============================================================ */
+
+function updateConnectionUI(){
+
+    const dot =
+        $("connectionDot");
+
+    const text =
+        $("connectionText");
+
+    const connect =
+        $("connectBtn");
+
+    const disconnect =
+        $("disconnectBtn");
+
+    if(state.connected){
+
+        dot.classList.add(
+            "connected"
+        );
+
+        text.textContent =
+            "USB Connected";
+
+        connect.style.display =
+            "none";
+
+        disconnect.style.display =
+            "block";
+
+        $("usbStatus").textContent =
+            "CONNECTED";
+
+        $("usbStatus").className =
+            "status-value green";
+
+    }else{
+
+        dot.classList.remove(
+            "connected"
+        );
+
+        text.textContent =
+            "USB Disconnected";
+
+        connect.style.display =
+            "block";
+
+        disconnect.style.display =
+            "none";
+
+        $("usbStatus").textContent =
+            "DISCONNECTED";
+
+        $("usbStatus").className =
+            "status-value red";
+
+        clearLiveValues();
+
+    }
+
+}
+
+/* ============================================================
+   CLEAR LIVE VALUES WHEN DISCONNECTED
+   ============================================================ */
+
+function clearLiveValues(){
+
+    $("moistureValue").textContent =
+        "--";
+
+    $("temperatureValue").textContent =
+        "--";
+
+    $("humidityValue").textContent =
+        "--";
+
+    $("lastUpdateValue").textContent =
+        "--";
+
+    $("dataStateDetail").textContent =
+        "No live data";
+
+    $("moistureDetail").textContent =
+        "Waiting for sensor data";
+
+    $("temperatureDetail").textContent =
+        "DHT22";
+
+    $("humidityDetail").textContent =
+        "DHT22";
+
+    $("soilStatus").textContent =
+        "NO DATA";
+
+    $("soilStatus").className =
+        "status-value";
+
+    $("homeSoilStatus").textContent =
+        "NO DATA";
+
+    $("pumpStatus").textContent =
+        "NO DATA";
+
+    $("pumpStatus").className =
+        "status-value";
+
+    $("irrigationPumpStatus").textContent =
+        "NO DATA";
+
+    $("irrigationPumpStatus").className =
+        "status-value";
+
+    $("modeStatus").textContent =
+        "NO DATA";
+
+    $("modeStatus").className =
+        "status-value";
+
+    $("moistureProgress").style.width =
+        "0%";
+
+    updateModeButtons();
+    updatePumpButtons();
+
+}
+
+/* ============================================================
+   SEND COMMAND TO ESP32
+   ============================================================ */
+
+async function sendCommand(command){
+
+    if(
+        !state.connected ||
+        !state.serialPort ||
+        !state.serialPort.writable
+    ){
+
+        showToast(
+            "Connect the ESP32 before sending commands.",
+            "warning"
+        );
+
+        return false;
+
+    }
+
+    try{
+
+        const encoder =
+            new TextEncoder();
+
+        const writer =
+            state.serialPort.writable.getWriter();
+
+        state.writer =
+            writer;
+
+        await writer.write(
+            encoder.encode(
+                command + "\n"
+            )
+        );
+
+        writer.releaseLock();
+
+        state.writer =
+            null;
+
+        console.log(
+            "Command sent:",
+            command
+        );
+
+        return true;
+
+    }catch(error){
+
+        console.error(
+            error
+        );
+
+        showToast(
+            "Command could not be sent.",
+            "error"
+        );
+
+        return false;
+
+    }
+
+}
+
+/* ============================================================
+   MODE CONTROL
+   ============================================================ */
+
+async function setMode(mode){
+
+    mode =
+        String(mode)
+        .toUpperCase();
+
+    if(
+        mode !== "AUTO" &&
+        mode !== "MANUAL"
+    ){
+
+        return;
+
+    }
+
+    const success =
+        await sendCommand(
+            `MODE:${mode}`
+        );
+
+    if(success){
+
+        state.mode =
+            mode;
+
+        updateModeButtons();
+
+        updateModeElement(
+            $("modeStatus"),
+            mode
+        );
+
+        showToast(
+            `${mode} mode command sent.`,
+            "success"
+        );
+
+    }
+
+}
+
+/* ============================================================
+   PUMP CONTROL
+   ============================================================ */
+
+async function setPump(pump){
+
+    pump =
+        String(pump)
+        .toUpperCase();
+
+    if(
+        pump !== "ON" &&
+        pump !== "OFF"
+    ){
+
+        return;
+
+    }
+
+    const success =
+        await sendCommand(
+            `PUMP:${pump}`
+        );
+
+    if(success){
+
+        state.pump =
+            pump;
+
+        updatePumpButtons();
+
+        updatePumpElement(
+            $("pumpStatus"),
+            pump
+        );
+
+        updatePumpElement(
+            $("irrigationPumpStatus"),
+            pump
+        );
+
+        showToast(
+            `Pump ${pump} command sent.`,
+            "success"
+        );
+
+    }
+
+}
+
+/* ============================================================
+   MODE BUTTON VISUALS
+   ============================================================ */
+
+function updateModeButtons(){
+
+    const buttons = [
+
+        $("autoBtn"),
+        $("manualBtn"),
+        $("homeAutoBtn"),
+        $("homeManualBtn")
+
+    ];
+
+    buttons.forEach(
+        button => {
+
+            if(button){
+                button.classList.remove(
+                    "active"
+                );
+            }
+
+        }
+    );
+
+    if(
+        state.mode === "AUTO"
+    ){
+
+        $("autoBtn")
+            ?.classList.add("active");
+
+        $("homeAutoBtn")
+            ?.classList.add("active");
+
+        $("modeDescription").innerHTML =
+            "<strong>AUTO mode active.</strong><br>" +
+            "The Arduino can automatically start irrigation " +
+            "when soil moisture reaches the dry threshold and " +
+            "stop irrigation when the wet threshold is reached.";
+
+    }
+
+    if(
+        state.mode === "MANUAL"
+    ){
+
+        $("manualBtn")
+            ?.classList.add("active");
+
+        $("homeManualBtn")
+            ?.classList.add("active");
+
+        $("modeDescription").innerHTML =
+            "<strong>MANUAL mode active.</strong><br>" +
+            "Use the pump ON and OFF controls to send direct " +
+            "commands to the Arduino.";
+
+    }
+
+}
+
+/* ============================================================
+   PUMP BUTTON VISUALS
+   ============================================================ */
+
+function updatePumpButtons(){
+
+    const buttons = [
+
+        $("pumpOnBtn"),
+        $("pumpOffBtn"),
+        $("homePumpOnBtn"),
+        $("homePumpOffBtn")
+
+    ];
+
+    buttons.forEach(
+        button => {
+
+            if(button){
+
+                button.classList.remove(
+                    "active"
+                );
+
+            }
+
+        }
+    );
+
+    if(state.pump === "ON"){
+
+        $("pumpOnBtn")
+            ?.classList.add("active");
+
+        $("homePumpOnBtn")
+            ?.classList.add("active");
+
+    }
+
+    if(state.pump === "OFF"){
+
+        $("pumpOffBtn")
+            ?.classList.add("active");
+
+        $("homePumpOffBtn")
+            ?.classList.add("active");
+
+    }
+
+}
+
+/* ============================================================
+   THRESHOLD SETTINGS
+   ============================================================ */
+
+function saveThresholds(){
+
+    const dry =
+        Number(
+            $("dryThresholdInput").value
+        );
+
+    const wet =
+        Number(
+            $("wetThresholdInput").value
+        );
+
+    const validation =
+        $("settingsValidation");
+
+    if(
+        !Number.isFinite(dry) ||
+        !Number.isFinite(wet)
+    ){
+
+        validation.textContent =
+            "Please enter valid numeric values.";
+
+        return;
+
+    }
+
+    if(
+        dry < 0 ||
+        dry > 100 ||
+        wet < 0 ||
+        wet > 100
+    ){
+
+        validation.textContent =
+            "Both thresholds must be between 0 and 100.";
+
+        return;
+
+    }
+
+    if(dry >= wet){
+
+        validation.textContent =
+            "Dry threshold must be lower than wet threshold.";
+
+        return;
+
+    }
+
+    state.dryThreshold =
+        Math.round(dry);
+
+    state.wetThreshold =
+        Math.round(wet);
+
+    saveLocalSettings();
+
+    updateThresholdDisplays();
+
+    validation.textContent =
+        "Thresholds are valid and saved locally.";
+
+    sendCommand(
+        `DRY:${state.dryThreshold}`
+    );
+
+    sendCommand(
+        `WET:${state.wetThreshold}`
+    );
+
+    showToast(
+        "Threshold settings updated.",
+        "success"
+    );
+
+}
+
+/* ============================================================
+   LOAD SAVED SETTINGS
+   ============================================================ */
+
+function loadSavedSettings(){
+
+    loadLocalData();
+
+    $("dryThresholdInput").value =
+        state.dryThreshold;
+
+    $("wetThresholdInput").value =
+        state.wetThreshold;
+
+    updateThresholdDisplays();
+
+    $("settingsValidation").textContent =
+        "Saved settings restored.";
+
+}
+
+/* ============================================================
+   THRESHOLD DISPLAY
+   ============================================================ */
+
+function updateThresholdDisplays(){
+
+    $("dryThresholdInput").value =
+        state.dryThreshold;
+
+    $("wetThresholdInput").value =
+        state.wetThreshold;
+
+    $("homeDryThreshold").textContent =
+        `${state.dryThreshold}%`;
+
+    $("homeWetThreshold").textContent =
+        `${state.wetThreshold}%`;
+
+    $("irrigationDryThreshold").textContent =
+        `${state.dryThreshold}%`;
+
+    $("irrigationWetThreshold").textContent =
+        `${state.wetThreshold}%`;
+
+}
+
+/* ============================================================
+   HISTORY TABLE
+   ============================================================ */
+
+function renderHistory(){
+
+    const container =
+        $("historyTableContainer");
+
+    if(!state.history.length){
+
+        container.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">📊</div>
+                No sensor history available yet.
+            </div>
+        `;
+
+        return;
+
+    }
+
+    const rows =
+        state.history
+        .slice(-30)
+        .reverse()
+        .map(
+            point => {
+
+                return `
+                    <tr>
+                        <td>${escapeHTML(formatDateTime(point.time))}</td>
+
+                        <td>
+                            ${formatNumber(point.moisture,0)}%
+                        </td>
+
+                        <td>
+                            ${
+                                point.temperature === null
+                                ? "--"
+                                : formatNumber(
+                                    point.temperature,
+                                    1
+                                  ) + "°C"
+                            }
+                        </td>
+
+                        <td>
+                            ${
+                                point.humidity === null
+                                ? "--"
+                                : formatNumber(
+                                    point.humidity,
+                                    0
+                                  ) + "%"
+                            }
+                        </td>
+
+                        <td class="${statusClass(point.soilStatus)}">
+                            ${escapeHTML(point.soilStatus || "--")}
+                        </td>
+
+                        <td class="${pumpClass(point.pump)}">
+                            ${escapeHTML(point.pump || "--")}
+                        </td>
+
+                        <td>
+                            ${escapeHTML(point.mode || "--")}
+                        </td>
+                    </tr>
+                `;
+
+            }
+        )
+        .join("");
+
+    container.innerHTML = `
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>Time</th>
+                        <th>Moisture</th>
+                        <th>Temperature</th>
+                        <th>Humidity</th>
+                        <th>Soil</th>
+                        <th>Pump</th>
+                        <th>Mode</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+                    ${rows}
+                </tbody>
+
+            </table>
+
+        </div>
+    `;
+
+}
+
+/* ============================================================
+   CHART
+   ============================================================ */
+
+function drawChart(){
+
+    const canvas =
+        $("moistureCanvas");
+
+    if(!canvas){
+        return;
+    }
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    if(
+        rect.width <= 0 ||
+        rect.height <= 0
+    ){
+
+        return;
+
+    }
+
+    const ratio =
+        window.devicePixelRatio || 1;
+
+    canvas.width =
+        rect.width * ratio;
+
+    canvas.height =
+        rect.height * ratio;
+
+    const ctx =
+        canvas.getContext("2d");
+
+    ctx.scale(
+        ratio,
+        ratio
+    );
+
+    const width =
+        rect.width;
+
+    const height =
+        rect.height;
+
+    ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+    /*
+       Chart background.
+    */
+
+    ctx.fillStyle =
+        "#090909";
+
+    ctx.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+    const padding = {
+
+        left:45,
+        right:20,
+        top:25,
+        bottom:40
+
+    };
+
+    const chartWidth =
+        width -
+        padding.left -
+        padding.right;
+
+    const chartHeight =
+        height -
+        padding.top -
+        padding.bottom;
+
+    /*
+       Horizontal grid lines.
+    */
+
+    ctx.font =
+        "11px Segoe UI";
+
+    ctx.textAlign =
+        "right";
+
+    for(let i=0;i<=5;i++){
+
+        const value =
+            i * 20;
+
+        const y =
+            padding.top +
+            chartHeight -
+            (value / 100) *
+            chartHeight;
+
+        ctx.strokeStyle =
+            "#202020";
+
+        ctx.lineWidth =
+            1;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            padding.left,
+            y
+        );
+
+        ctx.lineTo(
+            width - padding.right,
+            y
+        );
+
+        ctx.stroke();
+
+        ctx.fillStyle =
+            "#777";
+
+        ctx.fillText(
+            `${value}%`,
+            padding.left - 8,
+            y + 4
+        );
+
+    }
+
+    if(!state.history.length){
+
+        ctx.fillStyle =
+            "#666";
+
+        ctx.textAlign =
+            "center";
+
+        ctx.font =
+            "14px Segoe UI";
+
+        ctx.fillText(
+            "Waiting for sensor data...",
+            width / 2,
+            height / 2
+        );
+
+        return;
+
+    }
+
+    const points =
+        state.history
+        .slice(-60);
+
+    /*
+       Create moisture line.
+    */
+
+    const step =
+        points.length > 1
+        ? chartWidth /
+          (points.length - 1)
+        : chartWidth;
+
+    ctx.beginPath();
+
+    points.forEach(
+        (point,index) => {
+
+            const x =
+                padding.left +
+                index * step;
+
+            const value =
+                clamp(
+                    Number(point.moisture) || 0,
+                    0,
+                    100
+                );
+
+            const y =
+                padding.top +
+                chartHeight -
+                (value / 100) *
+                chartHeight;
+
+            if(index === 0){
+
+                ctx.moveTo(
+                    x,
+                    y
+                );
+
+            }else{
+
+                ctx.lineTo(
+                    x,
+                    y
+                );
+
+            }
+
+        }
+    );
+
+    ctx.strokeStyle =
+        "#42f58d";
+
+    ctx.lineWidth =
+        3;
+
+    ctx.lineJoin =
+        "round";
+
+    ctx.lineCap =
+        "round";
+
+    ctx.stroke();
+
+    /*
+       Fill below graph.
+    */
+
+    if(points.length > 1){
+
+        ctx.lineTo(
+            padding.left +
+            (points.length - 1) *
+            step,
+
+            padding.top +
+            chartHeight
+        );
+
+        ctx.lineTo(
+            padding.left,
+            padding.top +
+            chartHeight
+        );
+
+        ctx.closePath();
+
+        const gradient =
+            ctx.createLinearGradient(
+                0,
+                padding.top,
+                0,
+                height
+            );
+
+        gradient.addColorStop(
+            0,
+            "rgba(66,245,141,.18)"
+        );
+
+        gradient.addColorStop(
+            1,
+            "rgba(66,245,141,0)"
+        );
+
+        ctx.fillStyle =
+            gradient;
+
+        ctx.fill();
+
+    }
+
+    /*
+       Redraw line after fill.
+    */
+
+    ctx.beginPath();
+
+    points.forEach(
+        (point,index) => {
+
+            const x =
+                padding.left +
+                index * step;
+
+            const value =
+                clamp(
+                    Number(point.moisture) || 0,
+                    0,
+                    100
+                );
+
+            const y =
+                padding.top +
+                chartHeight -
+                (value / 100) *
+                chartHeight;
+
+            if(index === 0){
+
+                ctx.moveTo(
+                    x,
+                    y
+                );
+
+            }else{
+
+                ctx.lineTo(
+                    x,
+                    y
+                );
+
+            }
+
+        }
+    );
+
+    ctx.strokeStyle =
+        "#42f58d";
+
+    ctx.lineWidth =
+        3;
+
+    ctx.stroke();
+
+}
+
+/* ============================================================
+   CLEAR HISTORY
+   ============================================================ */
+
+function clearHistory(){
+
+    state.history = [];
+
+    renderHistory();
+
+    drawChart();
+
+    showToast(
+        "Sensor history cleared.",
+        "success"
+    );
+
+}
+
+/* ============================================================
+   PLANTCARE AI
+   ============================================================ */
+
+function useLivePlantData(){
+
+    if(
+        state.moisture !== null
+    ){
+
+        $("plantMoisture").value =
+            state.moisture.toFixed(0);
+
+    }
+
+    if(
+        state.temperature !== null
+    ){
+
+        $("plantTemperature").value =
+            state.temperature.toFixed(1);
+
+    }
+
+    if(
+        state.humidity !== null
+    ){
+
+        $("plantHumidity").value =
+            state.humidity.toFixed(0);
+
+    }
+
+    showToast(
+        "Live sensor values copied to PlantCare AI.",
+        "success"
+    );
+
+}
+
+/* ============================================================
+   GENERATE PLANT ADVICE
+   ============================================================ */
+
+function generatePlantAdvice(){
+
+    const name =
+        $("plantName")
+        .value
+        .trim() ||
+        "your plant";
+
+    const condition =
+        $("plantCondition")
+        .value;
+
+    let moisture =
+        Number(
+            $("plantMoisture").value
+        );
+
+    let temperature =
+        Number(
+            $("plantTemperature").value
+        );
+
+    let humidity =
+        Number(
+            $("plantHumidity").value
+        );
+
+    if(!Number.isFinite(moisture)){
+
+        moisture =
+            state.moisture;
+
+    }
+
+    if(!Number.isFinite(temperature)){
+
+        temperature =
+            state.temperature;
+
+    }
+
+    if(!Number.isFinite(humidity)){
+
+        humidity =
+            state.humidity;
+
+    }
+
+    if(!Number.isFinite(moisture)){
+
+        showToast(
+            "Enter soil moisture or connect the ESP32 first.",
+            "warning"
+        );
+
+        return;
+
+    }
+
+    moisture =
+        clamp(
+            moisture,
+            0,
+            100
+        );
+
+    const soil =
+        calculateSoilStatus(
+            moisture
+        );
+
+    let watering;
+
+    if(
+        moisture <=
+        state.dryThreshold
+    ){
+
+        watering =
+            "The soil is currently in the dry range. Irrigation may be appropriate, but the plant's species, pot size, drainage and recent watering should also be considered.";
+
+    }else if(
+        moisture >=
+        state.wetThreshold
+    ){
+
+        watering =
+            "The soil is currently in the wet range. Additional watering is generally not indicated by the moisture reading.";
+
+    }else{
+
+        watering =
+            "The soil is between the configured dry and wet thresholds. Continue monitoring the moisture trend instead of repeatedly watering.";
+
+    }
+
+    const recommendations = [];
+
+    recommendations.push({
+
+        icon:"💧",
+
+        text:watering
+
+    });
+
+    if(
+        Number.isFinite(temperature)
+    ){
+
+        if(temperature >= 35){
+
+            recommendations.push({
+
+                icon:"🌡️",
+
+                text:
+                    "The measured temperature is relatively high. Check whether the plant is receiving suitable light, airflow and protection from excessive heat."
+
+            });
+
+        }else if(temperature <= 10){
+
+            recommendations.push({
+
+                icon:"❄️",
+
+                text:
+                    "The measured temperature is relatively low. Consider the plant's species-specific temperature requirements."
+
+            });
+
+        }else{
+
+            recommendations.push({
+
+                icon:"🌡️",
+
+                text:
+                    `Current temperature is ${temperature.toFixed(1)}°C. Compare this with the preferred range for ${escapeHTML(name)}.`
+
+            });
+
+        }
+
+    }
+
+    if(
+        Number.isFinite(humidity)
+    ){
+
+        recommendations.push({
+
+            icon:"💨",
+
+            text:
+                `Current relative humidity is ${humidity.toFixed(0)}%. Avoid assuming that high humidity always means the soil is wet; these are different measurements.`
+
+        });
+
+    }
+
+    if(condition === "dry"){
+
+        recommendations.push({
+
+            icon:"🌱",
+
+            text:
+                "Because the plant condition was marked as dry, inspect the soil physically as well as the sensor reading before deciding how much water is appropriate."
+
+        });
+
+    }
+
+    if(condition === "yellow"){
+
+        recommendations.push({
+
+            icon:"🍃",
+
+            text:
+                "Yellowing leaves can have several causes, including watering problems, nutrient issues, light conditions or natural leaf ageing. Do not diagnose the cause from moisture alone."
+
+        });
+
+    }
+
+    if(condition === "weak"){
+
+        recommendations.push({
+
+            icon:"🔎",
+
+            text:
+                "A weak-looking plant should be checked for soil condition, drainage, light, temperature, pests and other environmental factors."
+
+        });
+
+    }
+
+    if(condition === "healthy"){
+
+        recommendations.push({
+
+            icon:"✅",
+
+            text:
+                "The plant was marked healthy. Continue observing the moisture trend rather than watering on a fixed schedule alone."
+
+        });
+
+    }
+
+    const html = `
+
+        <h3>
+            🌿 PlantCare Report — ${escapeHTML(name)}
+        </h3>
+
+        <p>
+            Current soil classification:
+            <strong class="${statusClass(soil)}">
+                ${escapeHTML(soil)}
+            </strong>
+        </p>
+
+        <div class="recommendation-list">
+
+            ${recommendations.map(
+                item => `
+
+                    <div class="recommendation">
+
+                        <div class="recommendation-icon">
+                            ${item.icon}
+                        </div>
+
+                        <p>
+                            ${item.text}
+                        </p>
+
+                    </div>
+
+                `
+            ).join("")}
+
+        </div>
+
+        <p style="margin-top:17px">
+            <strong>Important:</strong>
+            PlantCare AI is an offline local assistant. Its
+            recommendations are general guidance generated from
+            the entered values and are not a substitute for
+            species-specific horticultural advice.
+        </p>
+    `;
+
+    $("plantAdvice").innerHTML =
+        html;
+
+    $("plantAdvice").style.display =
+        "block";
+
+}
+
+/* ============================================================
+   RATING SYSTEM
+   ============================================================ */
+
+function setupRating(){
+
+    document.querySelectorAll(
+        ".star"
+    ).forEach(
+        star => {
+
+            star.addEventListener(
+                "click",
+                () => {
+
+                    state.selectedRating =
+                        Number(
+                            star.dataset.star
+                        );
+
+                    updateStars();
+
+                }
+            );
+
+        }
+    );
+
+}
+
+function updateStars(){
+
+    document.querySelectorAll(
+        ".star"
+    ).forEach(
+        star => {
+
+            const value =
+                Number(
+                    star.dataset.star
+                );
+
+            star.classList.toggle(
+                "selected",
+                value <=
+                state.selectedRating
+            );
+
+        }
+    );
+
+    if(state.selectedRating){
+
+        $("selectedRatingText").textContent =
+            `${state.selectedRating} out of 5 stars selected.`;
+
+    }else{
+
+        $("selectedRatingText").textContent =
+            "No rating selected.";
+
+    }
+
+}
+
+/* ============================================================
+   SUBMIT RATING
+   ============================================================ */
+
+function submitRating(){
+
+    if(
+        state.selectedRating < 1 ||
+        state.selectedRating > 5
+    ){
+
+        showToast(
+            "Please select a rating from 1 to 5 stars.",
+            "warning"
+        );
+
+        return;
+
+    }
+
+    const feedback =
+        $("feedbackInput")
+        .value
+        .trim();
+
+    const rating = {
+
+        stars:
+            state.selectedRating,
+
+        feedback:
+            feedback,
+
+        date:
+            new Date().toISOString()
+
+    };
+
+    state.ratings.push(
+        rating
+    );
+
+    try{
+
+        localStorage.setItem(
+            "aquagrow_ratings",
+            JSON.stringify(
+                state.ratings
+            )
+        );
+
+    }catch(error){
+
+        console.error(
+            error
+        );
+
+    }
+
+    renderRatingHistory();
+
+    renderAverageRating();
+
+    $("feedbackInput").value = "";
+
+    state.selectedRating = 0;
+
+    updateStars();
+
+    showToast(
+        "Thank you for your rating!",
+        "success"
+    );
+
+}
+
+/* ============================================================
+   AVERAGE RATING
+   ============================================================ */
+
+function renderAverageRating(){
+
+    if(!state.ratings.length){
+
+        $("averageRating").textContent =
+            "0.0";
+
+        $("ratingCount").textContent =
+            "0 ratings";
+
+        return;
+
+    }
+
+    const total =
+        state.ratings.reduce(
+            (
+                sum,
+                rating
+            ) =>
+                sum +
+                Number(
+                    rating.stars
+                ),
+            0
+        );
+
+    const average =
+        total /
+        state.ratings.length;
+
+    $("averageRating").textContent =
+        average.toFixed(1);
+
+    $("ratingCount").textContent =
+        `${state.ratings.length} ${
+            state.ratings.length === 1
+            ? "rating"
+            : "ratings"
+        }`;
+
+}
+
+/* ============================================================
+   RATING HISTORY
+   ============================================================ */
+
+function renderRatingHistory(){
+
+    const container =
+        $("ratingHistory");
+
+    if(!state.ratings.length){
+
+        container.innerHTML = `
+            <div class="empty">
+                No ratings submitted yet.
+            </div>
+        `;
+
+        return;
+
+    }
+
+    container.innerHTML =
+        state.ratings
+        .slice()
+        .reverse()
+        .map(
+            rating => `
+
+                <div class="rating-item">
+
+                    <div class="rating-stars">
+                        ${"★".repeat(
+                            Number(rating.stars)
+                        )}
+                        <span style="color:#555 !important">
+                            ${"★".repeat(
+                                5 -
+                                Number(rating.stars)
+                            )}
+                        </span>
+                    </div>
+
+                    <div style="
+                        margin-top:7px;
+                        color:#bbb;
+                        font-size:12px;
+                    ">
+                        ${
+                            rating.feedback
+                            ? escapeHTML(
+                                rating.feedback
+                              )
+                            : "No written feedback."
+                        }
+                    </div>
+
+                    <div style="
+                        margin-top:6px;
+                        color:#666;
+                        font-size:10px;
+                    ">
+                        ${escapeHTML(
+                            formatDateTime(
+                                new Date(
+                                    rating.date
+                                )
+                            )
+                        )}
+                    </div>
+
+                </div>
+            `
+        )
+        .join("");
+
+}
+
+/* ============================================================
+   DISCONNECT
+   ============================================================ */
+
+async function disconnectSerial(){
+
+    state.connected = false;
+
+    try{
+
+        if(state.reader){
+
+            await state.reader.cancel();
+
+        }
+
+    }catch(error){
+
+        console.warn(
+            error
+        );
+
+    }
+
+    try{
+
+        if(state.serialPort){
+
+            await state.serialPort.close();
+
+        }
+
+    }catch(error){
+
+        console.warn(
+            error
+        );
+
+    }
+
+    state.serialPort =
+        null;
+
+    state.reader =
+        null;
+
+    state.writer =
+        null;
+
+    updateConnectionUI();
+
+    showToast(
+        "ESP32 disconnected.",
+        "success"
+    );
+
+}
+
+/* ============================================================
+   BROWSER DISCONNECT EVENT
+   ============================================================ */
+
+if("serial" in navigator){
+
+    navigator.serial.addEventListener(
+        "disconnect",
+        event => {
+
+            if(
+                state.serialPort ===
+                event.port
+            ){
+
+                state.connected =
+                    false;
+
+                state.serialPort =
+                    null;
+
+                updateConnectionUI();
+
+                showToast(
+                    "ESP32 USB connection was disconnected.",
+                    "warning"
+                );
+
+            }
+
+        }
+    );
+
+}
+
+/* ============================================================
+   UTILITY FUNCTIONS
+   ============================================================ */
+
+function clamp(
+    value,
+    min,
+    max
+){
+
+    return Math.min(
+        Math.max(
+            Number(value) || 0,
+            min
+        ),
+        max
+    );
+
+}
+
+function formatNumber(
+    value,
+    decimals
+){
+
+    if(
+        value === null ||
+        value === undefined ||
+        !Number.isFinite(
+            Number(value)
+        )
+    ){
+
+        return "--";
+
+    }
+
+    return Number(
+        value
+    ).toFixed(
+        decimals
+    );
+
+}
+
+function formatTime(date){
+
+    if(!date){
+        return "--";
+    }
+
+    return date.toLocaleTimeString(
+        [],
+        {
+            hour:"2-digit",
+            minute:"2-digit",
+            second:"2-digit"
+        }
+    );
+
+}
+
+function formatDateTime(date){
+
+    if(!date){
+        return "--";
+    }
+
+    return new Date(
+        date
+    ).toLocaleString(
+        [],
+        {
+            day:"2-digit",
+            month:"short",
+            year:"numeric",
+            hour:"2-digit",
+            minute:"2-digit",
+            second:"2-digit"
+        }
+    );
+
+}
+
+/* ============================================================
+   CSS CLASS HELPERS
+   ============================================================ */
+
+function statusClass(status){
+
+    if(status === "DRY"){
+        return "red";
+    }
+
+    if(status === "WET"){
+        return "green";
+    }
+
+    if(status === "NORMAL"){
+        return "blue";
+    }
+
+    return "";
+
+}
+
+function pumpClass(pump){
+
+    if(pump === "ON"){
+        return "green";
+    }
+
+    if(pump === "OFF"){
+        return "red";
+    }
+
+    return "";
+
+}
+
+/* ============================================================
+   HTML ESCAPING
+   ============================================================ */
+
+function escapeHTML(value){
+
+    return String(
+        value ?? ""
+    )
+    .replace(
+        /&/g,
+        "&amp;"
+    )
+    .replace(
+        /</g,
+        "&lt;"
+    )
+    .replace(
+        />/g,
+        "&gt;"
+    )
+    .replace(
+        /"/g,
+        "&quot;"
+    )
+    .replace(
+        /'/g,
+        "&#039;"
+    );
+
+}
+
+/* ============================================================
+   TOAST NOTIFICATIONS
+   ============================================================ */
+
+function showToast(
+    message,
+    type="success"
+){
+
+    const container =
+        $("toastContainer");
+
+    const toast =
+        document.createElement(
+            "div"
+        );
+
+    toast.className =
+        `toast ${type}`;
+
+    toast.textContent =
+        message;
+
+    container.appendChild(
+        toast
+    );
+
+    setTimeout(
+        () => {
+
+            toast.style.opacity =
+                "0";
+
+            toast.style.transform =
+                "translateY(10px)";
+
+            setTimeout(
+                () => {
+
+                    toast.remove();
+
+                },
+                300
+            );
+
+        },
+        3000
+    );
+
+}
+
+/* ============================================================
+   KEYBOARD SHORTCUTS
+   ============================================================ */
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        /*
+           Ignore shortcuts while typing.
+        */
+
+        const tag =
+            document.activeElement?.tagName;
+
+        if(
+            tag === "INPUT" ||
+            tag === "TEXTAREA" ||
+            tag === "SELECT"
+        ){
+
+            return;
+
+        }
+
+        /*
+           Ctrl/Cmd + K:
+           Connect ESP32.
+        */
+
+        if(
+            (event.ctrlKey ||
+             event.metaKey) &&
+            event.key.toLowerCase() === "k"
+        ){
+
+            event.preventDefault();
+
+            if(
+                state.connected
+            ){
+
+                disconnectSerial();
+
+            }else{
+
+                connectSerial();
+
+            }
+
+        }
+
+    }
+);
+
+/* ============================================================
+   AUTOMATIC VISUAL REFRESH
+   ============================================================ */
+
+setInterval(
+    () => {
+
+        if(
+            state.connected &&
+            state.lastUpdate
+        ){
+
+            const elapsed =
+                Date.now() -
+                state.lastUpdate.getTime();
+
+            /*
+               If data has become old, visually warn
+               without inventing a new sensor value.
+            */
+
+            if(elapsed > 10000){
+
+                $("dataStateDetail").textContent =
+                    "Waiting for newer sensor data";
+
+            }else{
+
+                $("dataStateDetail").textContent =
+                    "Live sensor data";
+
+            }
+
+        }
+
+    },
+    1000
+);
+
+/* ============================================================
+   INITIAL THRESHOLD DISPLAY
+   ============================================================ */
+
+loadLocalData();
+
+setTimeout(
+    () => {
+
+        updateThresholdDisplays();
+
+        updateConnectionUI();
+
+    },
+    50
+);
+
+/* ============================================================
+   IMPORTANT AQUAGROW COMMUNICATION NOTES
+   ============================================================
+
+   EXPECTED ARDUINO PACKET:
+
+   DATA,45,28.0,62,NORMAL,OFF,AUTO
+
+   COMMANDS FROM DASHBOARD:
+
+   MODE:AUTO
+   MODE:MANUAL
+
+   PUMP:ON
+   PUMP:OFF
+
+   DRY:30
+   WET:60
+
+   SERIAL SPEEDS:
+
+   ESP32 USB:
+   115200
+
+   ESP32 ↔ Arduino:
+   57600
+
+   ARCHITECTURE:
+
+   Capacitive Soil Sensor
+              ↓
+         Arduino Uno
+              ↓
+             UART
+              ↓
+            ESP32
+              ↓
+             USB
+              ↓
+       Chrome / Edge
+              ↓
+       AquaGrow Dashboard
+              ↓
+        Control Command
+              ↓
+            ESP32
+              ↓
+           Arduino
+              ↓
+            Relay
+              ↓
+        Low-Voltage Pump
+
+   NO Wi-Fi
+   NO ESP32 HOTSPOT
+   NO 192.168.4.1
+   NO CLOUD DEPENDENCY
+   NO INTERNET REQUIRED FOR SENSOR COMMUNICATION
+
+   ============================================================ */
+
+</script>
+
+</body>
+</html>
